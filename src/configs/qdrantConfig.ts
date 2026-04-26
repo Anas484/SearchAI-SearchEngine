@@ -9,7 +9,7 @@ const createQdrantConnection = async () =>{
 }
 
 const createCollection = async (qdrant: QdrantClient) => {
-    await qdrant.createCollection('poetry', {
+    await qdrant.createCollection('story', {
         vectors: {
         size: 384,
         distance: "Cosine",

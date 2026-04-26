@@ -1,20 +1,26 @@
 import { getChannel } from "../configs/rabbitConfig.js";
 import VectorizeData from "./embeddedText.js";
 import { createQdrantConnection } from "../configs/qdrantConfig.js";
+import fs from 'fs'
 
 
+const CHECKPOINT_FILE = "checkpoint.json";
 
 function poetryToText(poetry: any): string {
   return `id: ${poetry.id}\npoetry: ${poetry.poetry}`.trim();
 }
 
+// function checkpoint(id: string) {
+//   fs.writeSync('checkpoint.json', JSON.stringify({ id }));
+// }
+
 const startConsumer = async () => {
   const channel = getChannel();
   const qdrant = await createQdrantConnection();
 
-  const collectionExists = await qdrant.collectionExists('poetry');
+  const collectionExists = await qdrant.collectionExists('story');
   if (!collectionExists.exists) {
-    await qdrant.createCollection('poetry', {
+    await qdrant.createCollection('story', {
       vectors: {
         size: 384,
         distance: 'Cosine'
@@ -32,7 +38,7 @@ const startConsumer = async () => {
     try {
       const data = JSON.parse(msg.content.toString());
 
-      console.log("Processing:", data.id);
+      console.log("Processing:", data.metadata.source);
       if (!data) {
         console.log("No data");
         channel.ack(msg);
@@ -42,16 +48,16 @@ const startConsumer = async () => {
       const res = await VectorizeData(poetryToText(data));
 
       const final_data: any  = {
-            id: data.id,
+            id: crypto.randomUUID(),
             vector: Array.from(res),
             payload:data
           }
         console.log(final_data);
-          await qdrant.upsert('poetry', {
+          await qdrant.upsert('story', {
             points: [final_data]
           });
           console.log('Upserted to Qdrant');
-
+          // checkpoint(data.id);
 
       channel.ack(msg); 
     } catch (err) {

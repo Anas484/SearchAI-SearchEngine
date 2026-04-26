@@ -1,45 +1,52 @@
-import { json } from "express";
-import { connectRabbitMQ,getChannel } from "../configs/rabbitConfig.js";
-import { PrismaClient } from '@prisma/client'
+import { getChannel } from "../configs/rabbitConfig.js";
+import { extractText } from "./chunkPdf.js";
+import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
+import fs from "fs";
+import path from "path";
 
+const directoryPath = "C:\\Users\\anas1\\OneDrive\\Desktop\\Ai_Search_Engine\\books";
 
-const prisma = new PrismaClient();
-
-
-const streamDBData = async () => {
-  let lastId: string | null = null;
+const streamPDFData = async () => {
   const channel = getChannel();
 
   await channel.assertQueue("db_stream", { durable: true });
   await channel.purgeQueue("db_stream");
 
-  while (true) {
-    const rows: any = await prisma.poetry.findMany({
-      take: 1,
-      ...(lastId && {
-        cursor: { id: lastId },
-        skip: 1,
-      }),
-      orderBy: { id: "asc" },
-    });
+  const splitter = new RecursiveCharacterTextSplitter({
+    chunkSize: 500,
+    chunkOverlap: 100,
+  });
 
-    if (!rows || rows.length === 0) {
-      console.log("No more data");
-      break;
-    }
+  const files = fs.readdirSync(directoryPath);
 
-    for (const row of rows) {
+  for (const file of files) {
+    const fullPath = path.join(directoryPath, file);
+
+    if (!fs.lstatSync(fullPath).isFile()) continue;
+
+    console.log("Processing PDF:", file);
+
+    // extractText returns Document[], not a string
+    const docs = await extractText(fullPath);
+
+    // Sanitize each doc's pageContent before splitting
+    const safeDocs = docs.map((doc) => ({
+      pageContent: String(doc.pageContent ?? ""),
+      metadata: { ...doc.metadata, source: file },
+    }));
+
+    const chunks = await splitter.splitDocuments(safeDocs);
+
+    for (const chunk of chunks) {
       channel.sendToQueue(
         "db_stream",
-        Buffer.from(JSON.stringify(row)),
+        Buffer.from(JSON.stringify(chunk)),
         { persistent: false }
       );
     }
 
-    lastId = rows[rows.length - 1].id;
+    console.log(`Sent ${chunks.length} chunks for: ${file}`);
   }
 };
 
-export {
-    streamDBData
-}
+export { streamPDFData };

@@ -1,6 +1,6 @@
 import express from 'express'
 import { connectRabbitMQ } from './configs/rabbitConfig.js';
-import { streamDBData } from './services/streamData.js';
+import { streamPDFData } from './services/streamData.js';
 import { startConsumer } from './services/consumeData.js';
 import searchRouter from './routes/searchRouter.js';
 
@@ -11,7 +11,7 @@ const startConnection = async () => {
 }
 await startConnection();
 
-await streamDBData()
+await streamPDFData()
 
 await startConsumer()
 
