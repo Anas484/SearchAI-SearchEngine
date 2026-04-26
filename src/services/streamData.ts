@@ -14,7 +14,7 @@ const streamDBData = async () => {
   await channel.purgeQueue("db_stream");
 
   while (true) {
-    const rows: any = await prisma.order.findMany({
+    const rows: any = await prisma.poetry.findMany({
       take: 1,
       ...(lastId && {
         cursor: { id: lastId },

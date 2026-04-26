@@ -1,21 +1,26 @@
 import { getChannel } from "../configs/rabbitConfig.js";
 import VectorizeData from "./embeddedText.js";
-import { createQdrantConnection,createCollection } from "../configs/qdrantConfig.js";
+import { createQdrantConnection } from "../configs/qdrantConfig.js";
 
 
 
-function orderToText(order: any) {
-    return `
-        Order ID: ${order.id}
-        User ID: ${order.userId}
-        Items: ${Array.isArray(order.items) ? order.items.join(", ") : ""}
-        Total Price: ${order.totalPrice}
-        Date: ${order.date}
-        `.trim();
+function poetryToText(poetry: any): string {
+  return `id: ${poetry.id}\npoetry: ${poetry.poetry}`.trim();
 }
+
 const startConsumer = async () => {
   const channel = getChannel();
   const qdrant = await createQdrantConnection();
+
+  const collectionExists = await qdrant.collectionExists('poetry');
+  if (!collectionExists.exists) {
+    await qdrant.createCollection('poetry', {
+      vectors: {
+        size: 384,
+        distance: 'Cosine'
+      }
+    });
+  }
 
   await channel.assertQueue("db_stream", { durable: true });
 
@@ -34,7 +39,7 @@ const startConsumer = async () => {
         return;
       }
     
-      const res = await VectorizeData(orderToText(data));
+      const res = await VectorizeData(poetryToText(data));
 
       const final_data: any  = {
             id: data.id,
@@ -42,7 +47,7 @@ const startConsumer = async () => {
             payload:data
           }
         console.log(final_data);
-          await qdrant.upsert('order', {
+          await qdrant.upsert('poetry', {
             points: [final_data]
           });
           console.log('Upserted to Qdrant');
@@ -51,7 +56,7 @@ const startConsumer = async () => {
       channel.ack(msg); 
     } catch (err) {
       console.error(err);
-
+      await channel.purgeQueue("db_stream")
       channel.nack(msg, false, false);
     }
   });
