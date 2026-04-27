@@ -21,7 +21,6 @@ const generateAnswer = async (query: string, context: string) => {
                 {
                   text: `
   You are a helpful assistant. Answer the user's question using ONLY the context below.
-  If the answer is not found in the context, say "I don't have enough information to answer that.
 
 Context:
 ${context}

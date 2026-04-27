@@ -13,8 +13,8 @@ const streamPDFData = async () => {
   await channel.purgeQueue("db_stream");
 
   const splitter = new RecursiveCharacterTextSplitter({
-    chunkSize: 500,
-    chunkOverlap: 100,
+    chunkSize: 100,
+    chunkOverlap: 20,
   });
 
   const files = fs.readdirSync(directoryPath);

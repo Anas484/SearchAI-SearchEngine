@@ -4,10 +4,9 @@ import { createQdrantConnection } from "../configs/qdrantConfig.js";
 import fs from 'fs'
 import crypto from 'crypto'
 
-
 const CHECKPOINT_FILE = "checkpoint.json";
 
-function poetryToText(story: any): string {
+function storyToText(story: any): string {
   return `id: ${story.id}\ncontent: ${story.pageContent}`.trim();
 }
 
@@ -46,7 +45,7 @@ const startConsumer = async () => {
         return;
       }
     
-      const res = await VectorizeData(poetryToText(data));
+      const res = await VectorizeData(storyToText(data));
 
       const final_data: any  = {
             id: crypto.randomUUID(),

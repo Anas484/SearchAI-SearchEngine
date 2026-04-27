@@ -7,7 +7,7 @@ const qdrant = await createQdrantConnection();
 
 const searchInQdrant = async(text : string) => {
     const vetorized = await VectorizeData(text)
-    const results = await qdrant.search('poetry',{
+    const results = await qdrant.search('story',{
         vector:Array.from(vetorized),
         limit:10,
         with_payload:true
